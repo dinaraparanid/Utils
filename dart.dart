@@ -1,16 +1,14 @@
-import 'dart:math';
-
 extension on int {
-  List<int> getDivs([final bool Function(int d)? predicate]) {
+  List<int> getDivs(final bool Function(int) predicate) {
     final divs = List<int>.empty(growable: true);
 
     for (int i = 1; i * i <= this; i++) {
       if (this % i == 0) {
-        if (predicate?.call(i) == true) {
+        if (predicate(i)) {
           divs.add(i);
         }
 
-        if (i * i < this && predicate?.call(this ~/ i) == true) {
+        if (i * i < this && predicate(this ~/ i)) {
           divs.add(this ~/ i);
         }
       }
@@ -20,10 +18,6 @@ extension on int {
   }
 
   bool get isSimple {
-    if (this == 1) {
-      return false;
-    }
-
     for (int i = 2; i * i <= this; i++) {
       if (this % i == 0) {
         return false;
@@ -34,13 +28,24 @@ extension on int {
   }
 }
 
+extension on bool {
+  bool arrow(final bool other) => !(this && !other);
+}
+
+extension on List<int> {
+  List<int> sortAndGet([int Function(int, int)? compare]) {
+    sort(compare);
+    return this;
+  }
+}
+
 extension IntIterableExt on Iterable<int> {
   int get sum => fold(0, (acc, x) => acc + x);
-  
+
   static Iterable<int> createRange(
-      final int startInclusive, 
+      final int startInclusive,
       [final int endExclusive = 2000000000]
-  ) => Iterable.generate(endExclusive - startInclusive, (x) => x + startInclusive);
+      ) => Iterable.generate(endExclusive - startInclusive, (x) => x + startInclusive);
 
   static Iterable<int> createDownRange(
       final int startInclusive,
@@ -48,10 +53,7 @@ extension IntIterableExt on Iterable<int> {
       ) => Iterable.generate(startInclusive - endExclusive, (x) => startInclusive - x);
 }
 
-extension IterExt<T, V extends Comparable> on Iterable<T> {
-  int count(final T predicate) => where((element) => element == predicate).length;
-  int countWhere(final Function(T it) func) => where((element) => func(element)).length;
-
+extension ComparableByIterableExt<T, V extends Comparable> on Iterable<T> {
   T maxBy(final V Function(T elem) func) {
     var iter = iterator; iter.moveNext();
     var max = iter.current;
@@ -84,13 +86,63 @@ extension ComparableIterExt<T extends Comparable> on Iterable<T> {
   T get min => minBy((elem) => elem);
 }
 
+extension IterableExt<T> on Iterable<T> {
+  int count(final T predicate) => where((element) => element == predicate).length;
+  int countWhere(final bool Function(T it) func) => where((element) => func(element)).length;
+
+  Iterable<T> stepBy(final int step) {
+    final list = List<T>.empty(growable: true);
+    final thisList = toList();
+
+    for (int i = 0; i < length; i += step) {
+      list.add(thisList[i]);
+    }
+
+    return list;
+  }
+
+  void forEachIndexed(final void Function(int index, T elem) action) {
+    final iter = iterator;
+
+    for (int i = 0; i < length; i++) {
+      iter.moveNext();
+      action(i, iter.current);
+    }
+  }
+
+  Iterable<T> filterIndexed(final bool Function(int index, T elem) predicate) {
+    final list = List<T>.empty(growable: true);
+    final thisList = toList();
+
+    for (int i = 0; i < length; i++) {
+      final elem = thisList[i];
+      if (predicate(i, elem)) {
+        list.add(elem);
+      }
+    }
+
+    return list;
+  }
+
+  bool allIndexed(final bool Function(int index, T elem) predicate) {
+    final iter = iterator;
+
+    for (int i = 0; i < length; i++) {
+      iter.moveNext();
+      if (!predicate(i, iter.current)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+}
+
 extension ListExt<T> on List<T> {
-  List<T> getSorted([final int Function(T, T)? compare]) {
+  List<T> getSorted([final int Function(T x, T y)? compare]) {
     sort(compare);
     return this;
   }
-
-  Iterable<T> stepBy(final int step) => Iterable.generate((length - 1) ~/ step, (i) => this[i * step]);
 
   List<T> without(final T elem) {
     final copy = toList(growable: true);
@@ -98,7 +150,14 @@ extension ListExt<T> on List<T> {
     return copy;
   }
 
+  List<T> withElem(final T elem) {
+    final copy = toList(growable: true);
+    copy.add(elem);
+    return copy;
+  }
+
   List<T> operator-(final T elem) => without(elem);
+  List<T> operator+(final T elem) => withElem(elem);
 }
 
 extension on String {
@@ -115,6 +174,9 @@ extension on String {
   }
 
   int count(final Pattern patter) => split(patter).length - 1;
+
+  int parseInt() => int.parse(this);
+  int? tryParseInt() => int.tryParse(this);
 }
 
 extension HighOrderFunctions<T, R> on T {
@@ -124,7 +186,7 @@ extension HighOrderFunctions<T, R> on T {
     func(this);
     return this;
   }
-  
+
   T? takeIf(final bool Function(T it) func) => func(this) ? this : null;
 }
 
@@ -134,7 +196,7 @@ class Pair<F, S> {
   Pair(this.first, this.second);
 
   @override
-  String toString() => "($first, $second)";
+  String toString() => '($first, $second)';
 
   @override
   bool operator ==(Object other) {
@@ -152,7 +214,7 @@ Pair<int, int> dfs(
     final List<List<int>> tab,
     final List<List<Pair<int, int>>> dp
 ) {
-  if (n < 0 || m < 0) {
+  if (n >= tab.length || m < 0) {
     return invalid;
   }
 
@@ -160,24 +222,19 @@ Pair<int, int> dfs(
     return dp[n][m];
   }
 
-  if ((m == 3 && n >= 7 && n <= 9) || (m == 9 && n >= 3 && n <= 5) || (m == 11 && n >= 9 && n <= 11)) {
-    // границы |
-    final f = dfs(n - 1, m, tab, dp);
-    dp[n][m] = Pair(f.first + tab[n][m], f.second + tab[n][m]);
-  } else if ((n == 10 && m >= 3 && m <= 5) || (n == 6 && m >= 9 && m <= 11) || (n == 12 && m >= 11 && m <= 13)) {
+  if ((n == 3 && m >= 6 && m <= 10) || (n == 0 && m == 13) || (n == 7 && m == 2) || (n == 8 && m == 16)) {
     // границы -
     final f = dfs(n, m - 1, tab, dp);
     dp[n][m] = Pair(f.first + tab[n][m], f.second + tab[n][m]);
+  } else if ((n == 1 && m == 14) || (n == 8 && m == 3) || (n == 9 && m == 17)) {
+    final f = dfs(n + 1, m, tab, dp);
+    dp[n][m] = Pair(f.first + tab[n][m], f.second + tab[n][m]);
   } else {
     // нет границ
-    final f = dfs(n - 1, m, tab, dp);
+    final f = dfs(n + 1, m, tab, dp);
     final s = dfs(n, m - 1, tab, dp);
     dp[n][m] = Pair(max(f.first, s.first) + tab[n][m], min(f.second, s.second) + tab[n][m]);
   }
 
   return dp[n][m];
-}
-
-extension on bool {
-  bool arrow(final bool other) => !(this && !other);
 }
