@@ -1,11 +1,3 @@
-import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
-
-import java.io.*;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 public final class Main {
 
     private static final boolean arrow(final boolean f, final boolean s) {
@@ -154,5 +146,91 @@ public final class Main {
 
         final var plus = plusElems(recList, n);
         operations.forEach((act) -> rec(act.apply(n), max, contains, notContains, operations, plus));
+    }
+
+    private static final boolean isPalindrom(final int n) {
+        final var s = Integer.toString(n).toCharArray();
+        final var endPoint = s.length / 2;
+
+        for (int i = 0; i < endPoint; i++)
+            if (s[i] != s[s.length - 1 - i])
+                return false;
+
+        return true;
+    }
+
+    @NotNull
+    private static final <T, R> List<R> scan(
+            @NotNull final R start,
+            @NotNull final Collection<? extends T> list,
+            @NotNull final BiFunction<? super R, T, ? extends R> accumulator
+    ) {
+        final var resultList = new ArrayList<R>(list.size());
+        var acc = start;
+
+        for (final var x : list) {
+            acc = accumulator.apply(acc, x);
+            resultList.add(acc);
+        }
+
+        return resultList;
+    }
+
+    @NotNull
+    private static final <T, R> List<R> scanWithFirst(
+            @NotNull final R start,
+            @NotNull final Collection<? extends T> list,
+            @NotNull final BiFunction<? super R, T, ? extends R> accumulator
+    ) {
+        final var resultList = new ArrayList<R>(list.size() + 1);
+        var acc = start;
+        resultList.add(start);
+
+        for (final var x : list) {
+            acc = accumulator.apply(acc, x);
+            resultList.add(acc);
+        }
+
+        return resultList;
+    }
+
+    @FunctionalInterface
+    private interface TripleFunction<F, S, T, R> {
+        R apply(final F first, final S second, final T third);
+    }
+
+    @NotNull
+    private static final <T, R> List<R> scanIndexed(
+            @NotNull final R start,
+            @NotNull final List<T> list,
+            @NotNull final TripleFunction<R, T, Integer, R> accumulator
+    ) {
+        final var resultList = new ArrayList<R>(list.size());
+        var acc = start;
+
+        for (int i = 0; i < list.size(); i++) {
+            acc = accumulator.apply(acc, list.get(i), i);
+            resultList.add(acc);
+        }
+
+        return resultList;
+    }
+
+    @NotNull
+    private static final <T, R> List<R> scanWithFirstIndexed(
+            @NotNull final R start,
+            @NotNull final List<T> list,
+            @NotNull final TripleFunction<R, T, Integer, R> accumulator
+    ) {
+        final var resultList = new ArrayList<R>(list.size() + 1);
+        var acc = start;
+        resultList.add(start);
+
+        for (int i = 0; i < list.size(); i++) {
+            acc = accumulator.apply(acc, list.get(i), i);
+            resultList.add(acc);
+        }
+
+        return resultList;
     }
 }
