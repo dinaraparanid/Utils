@@ -195,6 +195,11 @@ public final class Main {
     }
 
     @FunctionalInterface
+    private interface DoubleFunction<F, S, R> {
+        R apply(final F first, final S second);
+    }
+
+    @FunctionalInterface
     private interface TripleFunction<F, S, T, R> {
         R apply(final F first, final S second, final T third);
     }
@@ -202,14 +207,15 @@ public final class Main {
     @NotNull
     private static final <T, R> List<R> scanIndexed(
             @NotNull final R start,
-            @NotNull final List<T> list,
+            @NotNull final Collection<T> list,
             @NotNull final TripleFunction<R, T, Integer, R> accumulator
     ) {
         final var resultList = new ArrayList<R>(list.size());
         var acc = start;
+        var i = 0;
 
-        for (int i = 0; i < list.size(); i++) {
-            acc = accumulator.apply(acc, list.get(i), i);
+        for (final var x : list) {
+            acc = accumulator.apply(acc, x, i++);
             resultList.add(acc);
         }
 
@@ -219,18 +225,255 @@ public final class Main {
     @NotNull
     private static final <T, R> List<R> scanWithFirstIndexed(
             @NotNull final R start,
-            @NotNull final List<T> list,
-            @NotNull final TripleFunction<R, T, Integer, R> accumulator
+            @NotNull final Collection<? extends T> list,
+            @NotNull final TripleFunction<? super R, T, ? super Integer, ? extends R> accumulator
     ) {
         final var resultList = new ArrayList<R>(list.size() + 1);
         var acc = start;
         resultList.add(start);
+        var i = 0;
 
-        for (int i = 0; i < list.size(); i++) {
-            acc = accumulator.apply(acc, list.get(i), i);
+        for (final var x : list) {
+            acc = accumulator.apply(acc, x, i++);
             resultList.add(acc);
         }
 
         return resultList;
+    }
+
+    @NotNull
+    private static final <T> Optional<T> find(
+            @NotNull final Collection<? extends T> list,
+            @NotNull final Predicate<? super T> predicate
+    ) {
+        for (final var x : list)
+            if (predicate.test(x))
+                return Optional.of(x);
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<Pair<T, Integer>> findWithIndex(
+            @NotNull final Collection<? extends T> list,
+            @NotNull final Predicate<? super T> predicate
+    ) {
+        var i = 0;
+        
+        for (final var x : list) {
+            if (predicate.test(x))
+                return Optional.of(new Pair<>(x, i));
+
+            i++;
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<T> findIndexed(
+            @NotNull final Collection<? extends T> list,
+            @NotNull final DoubleFunction<? super T, ? super Integer, Boolean> predicate
+    ) {
+        var i = 0;
+
+        for (final var x : list)
+            if (predicate.apply(x, i++))
+                return Optional.of(x);
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<Pair<T, Integer>> findWithIndexIndexed(
+            @NotNull final Collection<? extends T> list,
+            @NotNull final DoubleFunction<? super T, ? super Integer, Boolean> predicate
+    ) {
+        var i = 0;
+
+        for (final var x : list)
+            if (predicate.apply(x, i++))
+                return Optional.of(new Pair<>(x, i));
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<T> findLast(
+            @NotNull final List<? extends T> list,
+            @NotNull final Predicate<? super T> predicate
+    ) {
+        final var reverseIter = list.listIterator(list.size());
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            final var prev = reverseIter.previous();
+
+            if (predicate.test(prev))
+                return Optional.of(prev);
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<T> findLast(
+            @NotNull final Deque<? extends T> list,
+            @NotNull final Predicate<? super T> predicate
+    ) {
+        final var reverseIter = list.descendingIterator();
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            final var prev = reverseIter.next();
+
+            if (predicate.test(prev))
+                return Optional.of(prev);
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<Pair<T, Integer>> findLastWithIndex(
+            @NotNull final List<? extends T> list,
+            @NotNull final Predicate<? super T> predicate
+    ) {
+        final var reverseIter = list.listIterator(list.size());
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            final var prev = reverseIter.previous();
+
+            if (predicate.test(prev))
+                return Optional.of(new Pair<>(prev, i));
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<Pair<T, Integer>> findLastWithIndex(
+            @NotNull final Deque<? extends T> list,
+            @NotNull final Predicate<? super T> predicate
+    ) {
+        final var reverseIter = list.descendingIterator();
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            final var prev = reverseIter.next();
+
+            if (predicate.test(prev))
+                return Optional.of(new Pair<>(prev, i));
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<T> findLastIndexed(
+            @NotNull final List<? extends T> list,
+            @NotNull final DoubleFunction<? super T, ? super Integer, Boolean> predicate
+    ) {
+        final var reverseIter = list.listIterator(list.size());
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            final var prev = reverseIter.previous();
+
+            if (predicate.apply(prev, i))
+                return Optional.of(prev);
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<Pair<T, Integer>> findLastWithIndexIndexed(
+            @NotNull final List<? extends T> list,
+            @NotNull final DoubleFunction<? super T, ? super Integer, Boolean> predicate
+    ) {
+        final var reverseIter = list.listIterator(list.size());
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            final var prev = reverseIter.previous();
+
+            if (predicate.apply(prev, i))
+                return Optional.of(new Pair<>(prev, i));
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<T> findLastIndexed(
+            @NotNull final Deque<? extends T> list,
+            @NotNull final DoubleFunction<? super T, ? super Integer, Boolean> predicate
+    ) {
+        final var reverseIter = list.descendingIterator();
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            final var prev = reverseIter.next();
+
+            if (predicate.apply(prev, i))
+                return Optional.of(prev);
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<T> findLastWithIndexIndexed(
+            @NotNull final Deque<? extends T> list,
+            @NotNull final DoubleFunction<? super T, ? super Integer, Boolean> predicate
+    ) {
+        final var reverseIter = list.descendingIterator();
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            final var prev = reverseIter.next();
+
+            if (predicate.apply(prev, i))
+                return Optional.of(prev);
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<Integer> indexOf(
+            @NotNull final Collection<? extends T> list,
+            @NotNull final Predicate<? super T> predicate
+    ) {
+        var i = 0;
+        
+        for (final var x : list) {
+            if (predicate.test(x))
+                return Optional.of(i);
+
+            i++;
+        }
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<Integer> indexOfLast(
+            @NotNull final List<? extends T> list,
+            @NotNull final Predicate<? super T> predicate
+    ) {
+        for (int i = list.size() - 1; i >= 0; i--)
+            if (predicate.test(list.get(i)))
+                return Optional.of(i);
+
+        return Optional.empty();
+    }
+
+    @NotNull
+    private static final <T> Optional<Integer> indexOfLast(
+            @NotNull final Deque<? extends T> list,
+            @NotNull final Predicate<? super T> predicate
+    ) {
+        final var iter = list.descendingIterator();
+
+        for (int i = list.size() - 1; i >= 0; i--)
+            if (predicate.test(iter.next()))
+                return Optional.of(i);
+
+        return Optional.empty();
     }
 }
