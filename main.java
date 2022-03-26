@@ -220,6 +220,11 @@ public final class Main {
         R apply(final F first, final S second, final T third);
     }
 
+    @FunctionalInterface
+    private interface FourFunction<A, B, C, D, R> {
+        R apply(final A first, final B second, final C third, final D fourth);
+    }
+
     @NotNull
     private static final <T, R> R foldIndexed(
             @NotNull final R start,
@@ -578,5 +583,55 @@ public final class Main {
             return Optional.empty();
 
         return Optional.of(list.get(list.size() - 1));
+    }
+
+    @NotNull
+    private static final List<Integer> listRange(final int startInclusive, final int finishExclusive) {
+        final var list = new ArrayList<Integer>(finishExclusive - startInclusive);
+
+        for (var i = startInclusive; i < finishExclusive; i++)
+            list.add(i);
+
+        return list;
+    }
+
+    private enum FifteenCondition { MAX, MIN }
+
+    private static final int fifteenRange(
+            final int pStart,
+            final int pFinish,
+            final int qStart,
+            final int qFinish,
+            @NotNull final FourFunction<List<Integer>, List<Integer>, List<Integer>, Integer, Boolean> predicate,
+            @NotNull final FifteenCondition condition
+    ) {
+        final var pArr = listRange(pStart, pFinish + 1);
+        final var qArr = listRange(qStart, qFinish + 1);
+
+        final var borders = listOf(pStart, pFinish, qStart, qFinish).stream().sorted().collect(Collectors.toList());
+        var ans = condition.equals(FifteenCondition.MAX) ? 0 : 1000000000;
+
+        for (int i = 0; i < borders.size(); i++) {
+            for (int q = i; q < borders.size(); q++) {
+                final var aArr = listRange(borders.get(i), borders.get(q) + 1);
+                var isOk = true;
+
+                for (int x = 0; x < 100; x++) {
+                    final var v = arrow(qArr.contains(x), (pArr.contains(x) == qArr.contains(x)) || (arrow(!pArr.contains(x), aArr.contains(x))));
+
+                    if (!v) {
+                        isOk = false;
+                        break;
+                    }
+                }
+
+                final var len = aArr.size();
+
+                if (isOk && ((condition.equals(FifteenCondition.MAX) && len < ans) || (condition.equals(FifteenCondition.MIN) && len > ans)))
+                    ans = len;
+            }
+        }
+
+        return ans;
     }
 }
