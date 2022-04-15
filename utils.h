@@ -32,10 +32,10 @@ typedef struct
   */
 
 #define SET_TO_PAIR(PAIR, FIRST, SECOND, TYPE1, TYPE2) \
-    (PAIR).first = malloc(sizeof(TYPE1)); \
-    (PAIR).second = malloc(sizeof(TYPE2)); \
-	*(TYPE1*)(PAIR).first = (FIRST); \
-	*(TYPE2*)(PAIR).second = (SECOND);
+    if (!(PAIR).first) (PAIR).first = malloc(sizeof(TYPE1)); \
+    if (!(PAIR).second) (PAIR).second = malloc(sizeof(TYPE2));) \
+    *(TYPE1*)(PAIR).first = (FIRST); \
+    *(TYPE2*)(PAIR).second = (SECOND);
 
 void reverse(void* arr, const size_t arr_size, const size_t size_of_elem) {
     const size_t size_in_bytes = arr_size * size_of_elem;
@@ -51,6 +51,7 @@ void reverse(void* arr, const size_t arr_size, const size_t size_of_elem) {
         char* second = p + (arr_size - i - 1) * size_of_elem;
         memmove(first, second, size_of_elem);
         memmove(second, t, size_of_elem);
+	free(t);    
     }
 }
 
