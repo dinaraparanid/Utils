@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 bool arrow(const bool a, const bool b) {
     return !(a && !b);
@@ -13,14 +14,14 @@ typedef struct
 } pair;
 
 /**
- * Gets first param from pair
+ * Gets first param as pointer from pair
  * @param PAIR pair itself
  * @param FIELD field (first or second)
  * @param TYPE type of first
  * @return param of field
  */
 
-#define GET_FROM_PAIR(PAIR, FIELD, TYPE) (*(TYPE*)(PAIR).FIELD)
+#define GET_PTR_FROM_PAIR(PAIR, FIELD, TYPE) ((TYPE*)(PAIR).FIELD)
 
  /**
   * Sets values to pair
@@ -31,11 +32,10 @@ typedef struct
   * @param TYPE2 type of second
   */
 
-#define SET_TO_PAIR(PAIR, FIRST, SECOND, TYPE1, TYPE2) \
-    if (!(PAIR).first) (PAIR).first = malloc(sizeof(TYPE1)); \
-    if (!(PAIR).second) (PAIR).second = malloc(sizeof(TYPE2));) \
-    *(TYPE1*)(PAIR).first = (FIRST); \
-    *(TYPE2*)(PAIR).second = (SECOND);
+void set_to_pair(pair* p, const void* first, const void* second) {
+    p->first = first;
+    p->second = second;
+}
 
 void reverse(void* arr, const size_t arr_size, const size_t size_of_elem) {
     const size_t size_in_bytes = arr_size * size_of_elem;
@@ -51,7 +51,7 @@ void reverse(void* arr, const size_t arr_size, const size_t size_of_elem) {
         char* second = p + (arr_size - i - 1) * size_of_elem;
         memmove(first, second, size_of_elem);
         memmove(second, t, size_of_elem);
-	free(t);    
+        free(t);
     }
 }
 
@@ -81,7 +81,7 @@ char* repeat_str(const char* str, const int n) {
     return ans;
 }
 
-char* replace_first_str(char* s, char* replacable, char* pattern) {
+char* replace_first_str(const char* s, const char* replacable, const char* pattern) {
     char* substr = strstr(s, replacable);
 
     if (!substr)
@@ -103,7 +103,7 @@ char* replace_first_str(char* s, char* replacable, char* pattern) {
     return new_s;
 }
 
-size_t count_arr(void* arr, const size_t arr_size, const void* pattern, const size_t elem_size) {
+size_t count_arr(const void* arr, const size_t arr_size, const void* pattern, const size_t elem_size) {
     const size_t size_in_bytes = arr_size * elem_size;
     size_t ans = 0;
 
@@ -112,4 +112,72 @@ size_t count_arr(void* arr, const size_t arr_size, const void* pattern, const si
             ans++;
 
     return ans;
+}
+
+pair* filter_arr(const void* arr, const size_t arr_size, bool (*predicate) (const void*, const size_t), const size_t size_of_elem) {
+    const char* finish = (const char*) arr + arr_size * size_of_elem;
+    void* new_arr = malloc(size_of_elem);
+    size_t new_arr_size = 0;
+
+    for (char* p = arr; p != finish; p += size_of_elem) {
+        if ((*predicate)(p, size_of_elem)) {
+            new_arr = realloc(new_arr, ++new_arr_size * size_of_elem);
+            memmove(new_arr + (new_arr_size - 1) * size_of_elem, p, size_of_elem);
+        }
+    }
+
+    pair* p = malloc(sizeof(pair));
+    set_to_pair(p, new_arr, &new_arr_size);
+    return p;
+}
+
+#define CMP_NUMBER(A, B, TYPE) \
+    const TYPE __CMP_ARG1 = *(const TYPE*) A; \
+    const TYPE __CMP_ARG2 = *(const TYPE*) B; \
+    if (__CMP_ARG1 < __CMP_ARG2) return -1; \
+    if (__CMP_ARG1 > __CMP_ARG2) return 1; \
+    return 0;
+
+int cmp_int8(const void* a, const void* b) {
+    CMP_NUMBER(a, b, int8_t);
+}
+
+int cmp_uint8(const void* a, const void* b) {
+    CMP_NUMBER(a, b, uint8_t);
+}
+
+int cmp_int16(const void* a, const void* b) {
+    CMP_NUMBER(a, b, int16_t);
+}
+
+int cmp_uint16(const void* a, const void* b) {
+    CMP_NUMBER(a, b, uint16_t);
+}
+
+int cmp_int32(const void* a, const void* b) {
+    CMP_NUMBER(a, b, int32_t);
+}
+
+int cmp_uint32(const void* a, const void* b) {
+    CMP_NUMBER(a, b, uint32_t);
+}
+
+int cmp_int64(const void* a, const void* b) {
+    CMP_NUMBER(a, b, int64_t);
+}
+
+int cmp_uint64(const void* a, const void* b) {
+    CMP_NUMBER(a, b, uint64_t);
+}
+
+int cmp_float32(const void* a, const void* b) {
+    CMP_NUMBER(a, b, float);
+}
+
+int cmp_float64(const void* a, const void* b) {
+    CMP_NUMBER(a, b, double);
+}
+
+int cmp_float128(const void* a, const void* b) {
+    CMP_NUMBER(a, b, long double);
 }
