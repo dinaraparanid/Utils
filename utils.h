@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 
-bool arrow(const bool a, const bool b) {
+inline bool arrow(const bool a, const bool b) {
     return !(a && !b);
 }
 
@@ -32,12 +32,20 @@ typedef struct
   * @param TYPE2 type of second
   */
 
-void set_to_pair(pair* p, const void* first, const void* second) {
-    p->first = first;
-    p->second = second;
+inline void set_to_pair(
+    pair* p,
+    const void* first,
+    const size_t size_of_first,
+    const void* second,
+    const size_t size_of_second
+) {
+    if (!p->first) p->first = malloc(size_of_first);
+    if (!p->second) p->second = malloc(size_of_second);
+    memmove(p->first, first, size_of_first);
+    memmove(p->second, second, size_of_second);
 }
 
-void reverse(void* arr, const size_t arr_size, const size_t size_of_elem) {
+inline void reverse(void* arr, const size_t arr_size, const size_t size_of_elem) {
     const size_t size_in_bytes = arr_size * size_of_elem;
     const size_t border = arr_size / 2;
     const size_t border_in_bytes = size_in_bytes / 2;
@@ -69,7 +77,7 @@ void reverse(void* arr, const size_t arr_size, const size_t size_of_elem) {
     __TO_REDIX_S[__TO_REDIX_SIZE] = '\0'; \
     char* SET_VARIABLE_NAME = __TO_REDIX_S;
 
-char* repeat_str(const char* str, const int n) {
+inline char* repeat_str(const char* str, const int n) {
     const size_t str_size = strlen(str);
     const size_t final_size = n * str_size;
     char* ans = malloc((final_size + 1) * sizeof(char));
@@ -81,7 +89,7 @@ char* repeat_str(const char* str, const int n) {
     return ans;
 }
 
-char* replace_first_str(const char* s, const char* replacable, const char* pattern) {
+inline char* replace_first_str(const char* s, const char* replacable, const char* pattern) {
     char* substr = strstr(s, replacable);
 
     if (!substr)
@@ -103,7 +111,7 @@ char* replace_first_str(const char* s, const char* replacable, const char* patte
     return new_s;
 }
 
-size_t count_arr(const void* arr, const size_t arr_size, const void* pattern, const size_t elem_size) {
+inline size_t count_arr(const void* arr, const size_t arr_size, const void* pattern, const size_t elem_size) {
     const size_t size_in_bytes = arr_size * elem_size;
     size_t ans = 0;
 
@@ -114,7 +122,7 @@ size_t count_arr(const void* arr, const size_t arr_size, const void* pattern, co
     return ans;
 }
 
-pair* filter_arr(const void* arr, const size_t arr_size, bool (*predicate) (const void*, const size_t), const size_t size_of_elem) {
+inline pair* filter_arr(const void* arr, const size_t arr_size, const size_t size_of_elem, bool (*predicate) (const void*, const size_t)) {
     const char* finish = (const char*) arr + arr_size * size_of_elem;
     void* new_arr = malloc(size_of_elem);
     size_t new_arr_size = 0;
@@ -127,7 +135,7 @@ pair* filter_arr(const void* arr, const size_t arr_size, bool (*predicate) (cons
     }
 
     pair* p = malloc(sizeof(pair));
-    set_to_pair(p, new_arr, &new_arr_size);
+    set_to_pair(p, new_arr, &new_arr_size, size_of_elem, sizeof(size_t));
     return p;
 }
 
@@ -180,4 +188,107 @@ int cmp_float64(const void* a, const void* b) {
 
 int cmp_float128(const void* a, const void* b) {
     CMP_NUMBER(a, b, long double);
+}
+
+#define MAX(A, B) A > B ? A : B
+#define MIN(A, B) A < B ? A : B
+
+void* map_arr(
+    const void* const arr,
+    const size_t arr_size,
+    const size_t size_of_elem,
+    const size_t size_of_new_elem,
+    void* (*transformator) (const void* const, const size_t, const size_t)
+) {
+    void* new_arr = malloc(arr_size * size_of_new_elem);
+    const char* const finish = (char*) new_arr + arr_size * size_of_elem;
+    char* np = new_arr;
+    char* op = arr;
+
+    for (; np != finish; np += size_of_new_elem, op += size_of_elem)
+        memmove(np, (*transformator)(op, size_of_elem, size_of_new_elem), size_of_new_elem);
+
+    return new_arr;
+}
+
+typedef struct iterator {
+    void* data;
+    size_t __size_of_elem__;
+    size_t __size__;
+
+    size_t get_size();
+    bool (*is_empty) (struct iterator* const self);
+    struct iterator* (*filter) (struct iterator* const self, (*predicate) (const void* const elem));
+    struct iterator* (*map) (struct iterator* const self, (*tranformator) (const void* const elem));
+} iterator;
+
+size_t __get_size_iterator__(const iterator* const iter) {
+    return iter->__size__;
+}
+
+iterator* iterator_from_array(const void* const arr, const size_t arr_size, const size_t size_of_elem) {
+    iterator* new_iter = malloc(sizeof(iterator));
+    new_iter->data = malloc(arr_size * size_of_elem);
+    new_iter->__size_of_elem__ = size_of_elem;
+    new_iter->__size__ = arr_size;
+    memmove(new_iter->data, arr, arr_size * size_of_elem);
+    __set_methods_iterator__(new_iter);
+    return new_iter;
+}
+
+iterator* empty_iterator(const size_t size_of_elem) {
+    iterator* new_iter = malloc(sizeof(iterator));
+    new_iter->data = malloc(size_of_elem);
+    new_iter->__size_of_elem__ = size_of_elem;
+    new_iter->__size__ = 0;
+    __set_methods_iterator__(new_iter);
+    return new_iter;
+}
+
+iterator* __filter_iterator__(const iterator* const iter, bool (*predicate) (const void* const)) {
+    iterator* new_iter = malloc(sizeof(iterator));
+    new_iter->data = malloc(iter->__size_of_elem__);
+    new_iter->__size_of_elem__ = iter->__size_of_elem__;
+    new_iter->__size__ = 0;
+
+    const char* const finish = (const char*) new_iter->data + new_iter->__size__ * new_iter->__size_of_elem__;
+    const size_t size_of_elem = new_iter->__size_of_elem__;
+
+    for (char* p = new_iter->data; p != finish; p += size_of_elem) {
+        if ((*predicate)(p)) {
+            new_iter->data = realloc(new_iter->data, ++new_iter->__size__ * size_of_elem);
+            memmove(new_iter->data + (new_iter->__size__ - 1) * size_of_elem, p, size_of_elem);
+        }
+    }
+
+    return new_iter;
+}
+
+iterator* __map_iterator__(
+    const iterator* const iter,
+    const size_t size_of_new_elem,
+    void* (*transformator) (const void* const, const size_t)
+) {
+    iterator* new_iter = malloc(sizeof(iterator));
+    new_iter->data = malloc(iter->__size__ * size_of_new_elem);
+    new_iter->__size_of_elem__ = size_of_new_elem;
+    new_iter->__size__ = iter->__size__;
+
+    void* new_arr = malloc(arr_size * size_of_new_elem);
+    const char* const finish = (char*) new_iter->data + new_iter->__size__ * size_of_new_elem;
+    char* np = new_iter->data;
+    char* op = iter->data;
+
+    const size_t size_of_elem = iter->__size_of_elem__;
+
+    for (; np != finish; np += size_of_new_elem, op += size_of_elem)
+        memmove(np, (*transformator)(op, size_of_new_elem), size_of_new_elem);
+
+    return new_arr;
+}
+
+void __set_methods_iterator__(iterator* const iter) {
+    iter->get_size = __get_size_iterator__;
+    iter->filter = __filter_iterator__;
+    iter->map = __map_iterator__;
 }
