@@ -106,17 +106,17 @@ public final class Main {
             final int n,
             final int m
     ) {
-        if (n < 0 || m < 0)
+        if (n < 0 || m < 0 || n >= table.size() || m >= table.size())
             return INVALID;
 
         if (!dp.get(n).get(m).equals(INVALID))
             return dp.get(n).get(m);
 
-        if (n == 6 && m >= 4 && m <= 9) {
-            final var f = dfs(table, dp, n, m - 1);
-            dp.get(n).set(m, new Pair<>(f.first + table.get(n).get(m), f.second + table.get(n).get(m)));
+        if ((m == 2 && n >= 2 && n <= 6) || (m == 5 && n >= 11 && n <= 14)) {
+            final var s = dfs(table, dp, n - 1, m);
+            dp.get(n).set(m, new Pair<>(s.first + table.get(n).get(m), s.second + + table.get(n).get(m)));
         } else {
-            final var f = dfs(table, dp, n, m - 1);
+            final var f = dfs(table, dp, n, m + 1);
             final var s = dfs(table, dp, n - 1, m);
             dp.get(n).set(m, new Pair<>(
                     Math.min(f.first, s.first) + table.get(n).get(m),
@@ -148,6 +148,26 @@ public final class Main {
 
         final var plus = plusElems(recList, n);
         operations.forEach((act) -> rec(act.apply(n), max, contains, notContains, operations, plus));
+    }
+
+    private static final void rec(
+            final int n,
+            final int max,
+            @NotNull final List<Integer> contains,
+            @NotNull final List<Integer> notContains,
+            @NotNull final List<? extends Function<Integer, Integer>> operations
+    ) { rec(n, max, contains, notContains, operations, new ArrayList<>()); }
+
+    @Contract(pure = true)
+    private static final boolean isPalindrom(@NotNull final String string) {
+        final var s = string.toCharArray();
+        final var endPoint = s.length / 2;
+
+        for (int i = 0; i < endPoint; i++)
+            if (s[i] != s[s.length - 1 - i])
+                return false;
+
+        return true;
     }
 
     private static final boolean isPalindrom(final int n) {
@@ -633,5 +653,25 @@ public final class Main {
         }
 
         return ans;
+    }
+
+    private static final long sumNum(@NotNull final String s) {
+        final var arr = s.toCharArray();
+        var sum = 0L;
+
+        for (final var c : arr)
+            sum += Integer.parseInt(Character.toString(c));
+
+        return sum;
+    }
+
+    @NotNull
+    private static final Stream<Character> toStream(@NotNull final String s) {
+        return s.chars().mapToObj(c -> (char) c);
+    }
+
+    @NotNull
+    private static final String toString(@NotNull final List<Character> list) {
+        return fold("", list, (@NonNls final var acc, final var x) -> acc + x);
     }
 }
