@@ -59,6 +59,17 @@ public final class Main {
         return list;
     }
 
+    private static final boolean areListsEqual(@NotNull final List<? extends Object> first, @NotNull final List<? extends Object> second) {
+        if (first.size() != second.size())
+            return false;
+
+        for (int i = 0; i < first.size(); i++)
+            if (!first.get(i).equals(second.get(i)))
+                return false;
+
+        return true;
+    }
+
     private static final class Pair<F, S> {
         final F first;
         final S second;
@@ -135,19 +146,37 @@ public final class Main {
             @NotNull final List<Integer> contains,
             @NotNull final List<Integer> notContains,
             @NotNull final List<? extends Function<Integer, Integer>> operations,
-            @NotNull final List<? super Integer> recList
+            @NotNull final List<Pair<Integer, Predicate<Integer>>> neededOperationsAmount,
+            @NotNull final List<? super Integer> recList,
+            @NotNull final List<Integer> countOperations
     ) {
         if (n >= max) {
             if (n == max
                     && (contains.isEmpty() || recList.containsAll(contains))
-                    && (notContains.isEmpty() || !recList.containsAll(notContains))
+                    && (notContains.isEmpty() || !recList.containsAll(notContains)
+                    &&  neededOperationsAmount.stream().allMatch(p -> p.second.test(countOperations.get(p.first))))
             ) _recCnt++;
 
             return;
         }
 
         final var plus = plusElems(recList, n);
-        operations.forEach((act) -> rec(act.apply(n), max, contains, notContains, operations, plus));
+
+        for (int i = 0; i < operations.size(); i++) {
+            final var newCntOperation = new ArrayList<>(countOperations);
+            newCntOperation.set(i, newCntOperation.get(i) + 1);
+
+            rec(
+                    operations.get(i).apply(n),
+                    max,
+                    contains,
+                    notContains,
+                    operations,
+                    neededOperationsAmount,
+                    plus,
+                    newCntOperation
+            );
+        }
     }
 
     private static final void rec(
@@ -155,8 +184,23 @@ public final class Main {
             final int max,
             @NotNull final List<Integer> contains,
             @NotNull final List<Integer> notContains,
-            @NotNull final List<? extends Function<Integer, Integer>> operations
-    ) { rec(n, max, contains, notContains, operations, new ArrayList<>()); }
+            @NotNull final List<? extends Function<Integer, Integer>> operations,
+            @NotNull final List<Pair<Integer, Predicate<Integer>>> neededOperationsAmount
+    ) {
+        rec(
+                n,
+                max,
+                contains,
+                notContains,
+                operations,
+                neededOperationsAmount,
+                new ArrayList<>(),
+                rangeList(0, operations.size() + 1)
+                        .stream()
+                        .map(x -> 0)
+                        .collect(Collectors.toList())
+        );
+    }
 
     @Contract(pure = true)
     private static final boolean isPalindrom(@NotNull final String string) {
@@ -606,7 +650,7 @@ public final class Main {
     }
 
     @NotNull
-    private static final List<Integer> listRange(final int startInclusive, final int finishExclusive) {
+    private static final List<Integer> rangeList(final int startInclusive, final int finishExclusive) {
         final var list = new ArrayList<Integer>(finishExclusive - startInclusive);
 
         for (var i = startInclusive; i < finishExclusive; i++)
@@ -625,15 +669,15 @@ public final class Main {
             @NotNull final FourFunction<List<Integer>, List<Integer>, List<Integer>, Integer, Boolean> predicate,
             @NotNull final FifteenCondition condition
     ) {
-        final var pArr = listRange(pStart, pFinish + 1);
-        final var qArr = listRange(qStart, qFinish + 1);
+        final var pArr = rangeList(pStart, pFinish + 1);
+        final var qArr = rangeList(qStart, qFinish + 1);
 
         final var borders = listOf(pStart, pFinish, qStart, qFinish).stream().sorted().collect(Collectors.toList());
         var ans = condition.equals(FifteenCondition.MAX) ? 0 : 1000000000;
 
         for (int i = 0; i < borders.size(); i++) {
             for (int q = i; q < borders.size(); q++) {
-                final var aArr = listRange(borders.get(i), borders.get(q) + 1);
+                final var aArr = rangeList(borders.get(i), borders.get(q) + 1);
                 var isOk = true;
 
                 for (int x = 0; x < 100; x++) {
@@ -673,5 +717,31 @@ public final class Main {
     @NotNull
     private static final String toString(@NotNull final List<Character> list) {
         return fold("", list, (@NonNls final var acc, final var x) -> acc + x);
+    }
+
+    private static final <T> long count(@NotNull final List<T> list, @NotNull final T elem) {
+        return list.stream().filter(e -> e.equals(elem)).count();
+    }
+
+    private static final <T> void forEachIndexed(@NotNull final List<T> list, DoubleFunction<T, Integer, Void> operation) {
+        var ind = 0;
+
+        for (final var e : list)
+            operation.apply(e, ind++);
+    }
+
+    @NotNull
+    private static final <T> List<T> filterIndexed(
+            @NotNull final List<T> list,
+            @NotNull DoubleFunction<T, Integer, Boolean> predicate
+    ) {
+        final var filtered = new ArrayList<T>();
+        var ind = 0;
+
+        for (final var e : list)
+            if (predicate.apply(e, ind++))
+                filtered.add(e);
+
+        return filtered;
     }
 }
