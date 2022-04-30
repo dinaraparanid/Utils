@@ -14,6 +14,15 @@ public final class Main {
         return cnt;
     }
 
+    private static final int countString(@NotNull final String s, @NotNull final String c) {
+        var pattern = Pattern.compile(c);
+        var matcher = pattern.matcher(s);
+
+        int cnt = 0;
+        while (matcher.find()) cnt++;
+        return cnt;
+    }
+
     private static final char maxLetterInString(@NotNull final CharSequence s) {
         final var charArr = s.toString().toCharArray();
         final var maxLetterMap = new HashMap<Character, Integer>();
@@ -642,7 +651,7 @@ public final class Main {
     }
 
     @NotNull
-    private static final <T> Optional<T> last(@NotNull final List<T> list) {
+    private static final <T> Optional<T> last(@NotNull final List<? extends T> list) {
         if (list.isEmpty())
             return Optional.empty();
 
@@ -723,7 +732,7 @@ public final class Main {
         return list.stream().filter(e -> e.equals(elem)).count();
     }
 
-    private static final <T> void forEachIndexed(@NotNull final List<T> list, DoubleFunction<T, Integer, Void> operation) {
+    private static final <T> void forEachIndexed(@NotNull final List<? extends T> list, DoubleFunction<? super T, ? super Integer, Void> operation) {
         var ind = 0;
 
         for (final var e : list)
@@ -732,8 +741,8 @@ public final class Main {
 
     @NotNull
     private static final <T> List<T> filterIndexed(
-            @NotNull final List<T> list,
-            @NotNull DoubleFunction<T, Integer, Boolean> predicate
+            @NotNull final List<? extends T> list,
+            @NotNull DoubleFunction<? super T, ? super Integer, Boolean> predicate
     ) {
         final var filtered = new ArrayList<T>();
         var ind = 0;
